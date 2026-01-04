@@ -11,19 +11,21 @@ type TimeRange = 'hour' | 'day' | 'any';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('nacional');
+  const [activeCategory, setActiveCategory] = useState<string>('general');
   const [timeRange, setTimeRange] = useState<TimeRange>('any');
   const [clusters, setClusters] = useState<StoryCluster[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchNews = async (scope: Tab, query: string, range: TimeRange) => {
+  const fetchNews = async (scope: Tab, query: string, range: TimeRange, category: string) => {
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({ scope });
       if (query.trim()) params.append('q', query.trim());
       if (range !== 'any') params.append('time_range', range);
+      if (category !== 'general') params.append('category', category);
 
       const res = await fetch(`/api/news?${params.toString()}`);
       const data = await res.json();
@@ -50,16 +52,24 @@ export default function Home() {
 
   // Initial load
   useEffect(() => {
-    fetchNews(activeTab, searchQuery, timeRange);
-  }, [activeTab, timeRange]);
+    fetchNews(activeTab, searchQuery, timeRange, activeCategory);
+  }, [activeTab, timeRange, activeCategory]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchNews(activeTab, searchQuery, timeRange);
+    // Search overrides category usually, but here we can keep category if we wanted strict filtering.
+    // However, backend logic currently prioritizes 'q' if present over 'category' keywords.
+    // So if user types, it's a manual search.
+    fetchNews(activeTab, searchQuery, timeRange, activeCategory);
   };
 
   const handleTimeChange = (range: TimeRange) => {
     setTimeRange(range);
+  };
+
+  const handleCategoryChange = (cat: string) => {
+    setActiveCategory(cat);
+    setSearchQuery(''); // Clear manual search when switching categories to ensure category view works
   };
 
   return (
@@ -97,7 +107,7 @@ export default function Home() {
 
             {/* Refresh */}
             <button
-              onClick={() => fetchNews(activeTab, searchQuery, timeRange)}
+              onClick={() => fetchNews(activeTab, searchQuery, timeRange, activeCategory)}
               disabled={loading}
               className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-full text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all disabled:opacity-50 whitespace-nowrap"
             >
@@ -187,12 +197,38 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Category Filters (Pills) */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+          {[
+            { id: 'general', label: 'General' },
+            { id: 'politica', label: 'Política' },
+            { id: 'economia', label: 'Economía' },
+            { id: 'deportes', label: 'Deportes' },
+            { id: 'tecnologia', label: 'Tecnología' },
+            { id: 'salud', label: 'Salud' },
+            { id: 'cultura', label: 'Cultura' },
+          ].map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => handleCategoryChange(cat.id)}
+              className={clsx(
+                "px-3 py-1.5 rounded-full text-xs font-bold border transition-colors whitespace-nowrap",
+                activeCategory === cat.id
+                  ? "bg-gray-800 text-white border-gray-800 dark:bg-white dark:text-gray-900"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
+              )}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
         {/* Query Context */}
         {searchQuery && (
           <div className="text-center text-sm text-gray-500">
             Resultados para: <span className="font-bold text-gray-800 dark:text-gray-200">"{searchQuery}"</span>
             <button
-              onClick={() => { setSearchQuery(''); fetchNews(activeTab, '', timeRange); }}
+              onClick={() => { setSearchQuery(''); fetchNews(activeTab, '', timeRange, activeCategory); }}
               className="ml-2 text-indigo-500 hover:underline text-xs"
             >
               (Limpiar búsqueda)

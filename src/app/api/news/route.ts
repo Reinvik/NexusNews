@@ -11,7 +11,18 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const scope = searchParams.get('scope') || 'nacional';
     const query = searchParams.get('q') || '';
+    const category = searchParams.get('category') || '';
     const timeRange = searchParams.get('time_range') || 'any';
+
+    const CATEGORY_QUERIES: Record<string, string> = {
+        'general': '',
+        'politica': '(politica OR gobierno OR congreso OR boric OR senado OR diputados OR constitucion OR ministro)',
+        'economia': '(economia OR inflacion OR dolar OR ipc OR banco central OR hacienda OR mercado)',
+        'deportes': '(futbol OR deporte OR colo-colo OR u de chile OR alexis OR vidal OR garin OR panamericanos)',
+        'tecnologia': '(tecnologia OR inteligencia artificial OR ciencia OR nasa OR celular OR app OR software)',
+        'salud': '(salud OR minsal OR virus OR vacuna OR hospital OR medico)',
+        'cultura': '(cultura OR arte OR musica OR cine OR libro OR concierto)'
+    };
 
     try {
         const apiKey = process.env.NEWS_API_KEY;
@@ -44,17 +55,32 @@ export async function GET(request: Request) {
         } else if (timeRange === 'day') {
             const oneDayAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
             fromDate = `&from=${oneDayAgo.toISOString()}`;
+        } else {
+            // Default 'any' or 'week' -> Last 7 days to ensure freshness and relevance
+            // This helps capture "Left" media which might have lower volume/frequency
+            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+            fromDate = `&from=${sevenDaysAgo.toISOString()}`;
         }
 
         // 3. Construct URLs (Balanced Strategy)
-        const pageSize = 50;
+        // INCREASED TO 100 to maximize diversity
+        const pageSize = 100;
         let articles: any[] = [];
 
         const fetchNews = async (domains: string) => {
             if (!domains) return [];
             let url = '';
-            if (query) {
-                url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&domains=${domains}&language=${language}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${apiKey}${fromDate}`;
+
+            // Build the specific query
+            let finalQuery = query;
+            if (!finalQuery && category && CATEGORY_QUERIES[category]) {
+                finalQuery = CATEGORY_QUERIES[category];
+            }
+
+            if (finalQuery) {
+                // strict match on domains is cleaner without 'domains=' sometimes if query is complex, 
+                // but we need to restrict to OUR domains to ensure bias balance.
+                url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(finalQuery)}&domains=${domains}&language=${language}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${apiKey}${fromDate}`;
             } else {
                 url = `https://newsapi.org/v2/everything?domains=${domains}&language=${language}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${apiKey}${fromDate}`;
             }

@@ -86,39 +86,54 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                         </div>
 
                         <div className="divide-y divide-gray-200/50 dark:divide-gray-800">
-                            {cluster.items.slice(0, 5).map((item, i) => (
-                                <a
-                                    key={i}
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 px-6 py-3 hover:bg-white dark:hover:bg-gray-800 transition-colors group/item items-center"
-                                >
-                                    <div className="md:hidden flex justify-between items-center mb-1">
-                                        <div className="flex items-center gap-2">
-                                            <BiasBadge bias={item.bias} />
-                                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{item.source}</span>
+                            {cluster.items.slice(0, 5).map((item, i) => {
+                                // Extract domain for favicon
+                                let domain = '';
+                                try {
+                                    domain = new URL(item.url).hostname;
+                                } catch (e) {
+                                    domain = 'google.com'; // fallback
+                                }
+                                const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+
+                                return (
+                                    <a
+                                        key={i}
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 px-6 py-3 hover:bg-white dark:hover:bg-gray-800 transition-colors group/item items-center"
+                                    >
+                                        <div className="md:hidden flex justify-between items-center mb-1">
+                                            <div className="flex items-center gap-2">
+                                                <BiasBadge bias={item.bias} />
+                                                <div className="flex items-center gap-1.5">
+                                                    <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded-sm opacity-80" />
+                                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{item.source}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div className="col-span-3 hidden md:block">
-                                        <BiasBadge bias={item.bias} />
-                                    </div>
+                                        <div className="col-span-3 hidden md:block">
+                                            <BiasBadge bias={item.bias} />
+                                        </div>
 
-                                    <div className="col-span-2 hidden md:flex items-center gap-2">
-                                        <span className="text-xs font-semibold text-gray-900 dark:text-gray-200 truncate">
-                                            {item.source}
-                                        </span>
-                                    </div>
+                                        <div className="col-span-2 hidden md:flex items-center gap-2">
+                                            <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded-sm opacity-80" />
+                                            <span className="text-xs font-semibold text-gray-900 dark:text-gray-200 truncate">
+                                                {item.source}
+                                            </span>
+                                        </div>
 
-                                    <div className="col-span-12 md:col-span-7 flex justify-between items-center gap-4">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400 group-hover/item:text-indigo-600 transition-colors font-medium leading-tight line-clamp-1">
-                                            {item.title}
-                                        </span>
-                                        <ExternalLink className="w-3 h-3 text-gray-300" />
-                                    </div>
-                                </a>
-                            ))}
+                                        <div className="col-span-12 md:col-span-7 flex justify-between items-center gap-4">
+                                            <span className="text-sm text-gray-600 dark:text-gray-400 group-hover/item:text-indigo-600 transition-colors font-medium leading-tight line-clamp-1">
+                                                {item.title}
+                                            </span>
+                                            <ExternalLink className="w-3 h-3 text-gray-300" />
+                                        </div>
+                                    </a>
+                                )
+                            })}
                         </div>
                     </div>
                 </div>
