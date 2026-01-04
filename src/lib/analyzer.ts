@@ -1,14 +1,16 @@
 /**
  * Interface representing a normalized news item from an API
  */
+export type BiasType = 'left' | 'center-left' | 'center' | 'center-right' | 'right';
+
 export interface NewsItem {
     url: string;
     title: string;
     source: string;
     publishedAt: string; // ISO date string
     description?: string;
-    urlToImage?: string; // Image URL from API
-    bias?: 'left' | 'center' | 'right'; // Added for UI display
+    urlToImage?: string;
+    bias?: BiasType;
 }
 
 /**
@@ -25,17 +27,18 @@ export const CHILE_LEFT = [
     'theclinic.cl',
     'elciudadano.com',
     'laizquierdadiario.cl',
-    'cooperativa.cl', // Broadly considered center-left/progressive
-    'cnnchile.com',   // Progressive liberal
+    'cooperativa.cl',
+    'cnnchile.com',
     'radio.uchile.cl',
-    'interferencia.cl'
+    'interferencia.cl',
+    'ciperchile.cl'
 ].join(',');
 
 export const CHILE_RIGHT_CENTER = [
     'latercera.com',
     'biobiochile.cl',
     'emol.com',
-    '24horas.cl', // State TV, usually institutional/center
+    '24horas.cl',
     't13.cl',
     'radioagricultura.cl',
     'adnradio.cl',
@@ -49,7 +52,7 @@ export const CHILE_DOMAINS = `${CHILE_LEFT},${CHILE_RIGHT_CENTER}`;
 export const INTL_LEFT = [
     'elpais.com',
     'rt.com',
-    'pagina12.com.ar', // Distinctly left
+    'pagina12.com.ar',
     'eldiario.es'
 ].join(',');
 
@@ -60,9 +63,9 @@ export const INTL_RIGHT_CENTER = [
     'elmundo.es',
     'lavanguardia.com',
     'abc.es',
-    'cnn.com', // CNN es is often center
-    'bbc.com', // BBC is center
-    'dw.com'   // DW is center
+    'cnn.com',
+    'bbc.com',
+    'dw.com'
 ].join(',');
 
 export const INTL_DOMAINS = `${INTL_LEFT},${INTL_RIGHT_CENTER}`;
@@ -95,53 +98,59 @@ export const ANGLO_DOMAINS = `${ANGLO_LEFT},${ANGLO_RIGHT_CENTER}`;
  * Represents a cluster of stories about the same event
  */
 export interface StoryCluster {
-    id: string; // concise hash or uuid
+    id: string;
     mainTitle: string;
-    summary: string; // AI generated summary
+    summary: string;
     items: NewsItem[];
-    biasDistribution: {
-        left: number;
-        center: number;
-        right: number;
-    };
+    biasDistribution: Record<BiasType, number>;
     firstPublishedAt: string;
+    blindspot?: boolean; // Is this a blindspot?
+    blindspotSide?: 'left' | 'right'; // Which side is ignoring this? (e.g. 'left' means Left is ignoring it)
 }
 
 /**
- * Hardcoded Bias Map for Chilean Media (MVP)
- * Adjusted to reflect the local "Duopoly vs Others" dynamic more effectively for filtering.
+ * Hardcoded Bias Map for Chilean Media (Bias 2.0)
+ * 5-point scale based on local media analysis.
  */
-const SOURCE_BIAS: Record<string, 'left' | 'center' | 'right'> = {
-    // CHILE
-    'La Tercera': 'right',
-    'Emol': 'right',
-    'BioBioChile': 'right',
+const SOURCE_BIAS: Record<string, BiasType> = {
+    // CHILE - DERECHA
     'El Mercurio': 'right',
+    'Emol': 'right',
     'Radio Agricultura': 'right',
-    'Meganoticias': 'center',
-    '24horas.cl': 'center',
-    'T13': 'center',
-    // Shifted to Left/Progressive for MVP contrast against the hard right
-    'CNN Chile': 'left',
-    'Cooperativa.cl': 'left',
-    'El Mostrador': 'left',
+
+    // CHILE - CENTRO DERECHA
+    'La Tercera': 'center-right',
+    'Meganoticias': 'center-right', // Bethia
+    'T13': 'center-right', // Luksic often center-right
+
+    // CHILE - CENTRO / NEUTRAL / INSTITUCIONAL
+    'BioBioChile': 'center', // Independent / Fast
+    '24horas.cl': 'center', // State TV
+    'CNN Chile': 'center', // Moved back to Center (Liberal) as per feedback
+    'ADN Radio': 'center',
+
+    // CHILE - CENTRO IZQUIERDA
+    'Cooperativa.cl': 'center-left',
+    'El Mostrador': 'center-left',
+
+    // CHILE - IZQUIERDA
     'El Desconcierto': 'left',
     'La Izquierda Diario': 'left',
     'El Ciudadano': 'left',
     'The Clinic': 'left',
     'Radio Universidad de Chile': 'left',
     'Interferencia': 'left',
-    'Radio Bío-Bío': 'right',
+    'CIPER': 'center-left', // Verification/Investigative often leans prog.
 
     // International
-    'El País': 'left',
+    'El País': 'center-left',
     'Página/12': 'left',
     'elDiario.es': 'left',
-    'RT': 'left',
+    'RT': 'left', // State media, anti-west often distinct
     'BBC News Mundo': 'center',
     'CNN en Español': 'center',
     'Infobae': 'right',
-    'Clarín': 'right',
+    'Clarín': 'center-right',
     'La Nación': 'right',
     'El Mundo': 'right',
     'ABC': 'right',
@@ -149,45 +158,48 @@ const SOURCE_BIAS: Record<string, 'left' | 'center' | 'right'> = {
     'Deutsche Welle (Español)': 'center',
 
     // English (Anglo)
-    'The New York Times': 'left',
-    'CNN': 'left',
+    'The New York Times': 'center-left',
+    'CNN': 'center-left',
     'MSNBC': 'left',
     'Fox News': 'right',
     'BBC News': 'center',
     'The Guardian': 'left',
-    'The Washington Post': 'left',
+    'The Washington Post': 'center-left',
     'Reuters': 'center',
     'Associated Press': 'center',
     'USA Today': 'center',
     'Bloomberg': 'center',
-    'Al Jazeera English': 'left',
+    'Al Jazeera English': 'center-left',
     'Wall Street Journal': 'right',
     'New York Post': 'right'
 };
 
-function getBiasForSource(sourceName: string): 'left' | 'center' | 'right' {
+function getBiasForSource(sourceName: string): BiasType {
     const cleanName = sourceName.trim();
     if (SOURCE_BIAS[cleanName]) return SOURCE_BIAS[cleanName];
 
     const lower = cleanName.toLowerCase();
-    if (lower.includes('tercera') || lower.includes('mercurio') || lower.includes('emol') || lower.includes('fox')) return 'right';
-    if (lower.includes('mostrador') || lower.includes('izquierda') || lower.includes('ciudadano') || lower.includes('guardian')) return 'left';
-    if (lower.includes('cnn') || lower.includes('bbc') || lower.includes('reuters')) return 'center';
+    if (lower.includes('tercera')) return 'center-right';
+    if (lower.includes('mercurio') || lower.includes('emol') || lower.includes(' agricultura')) return 'right';
+    if (lower.includes('fox')) return 'right';
+
+    if (lower.includes('mostrador') || lower.includes('cooperativa')) return 'center-left';
+    if (lower.includes('izquierda') || lower.includes('ciudadano') || lower.includes('clinic')) return 'left';
+
+    if (lower.includes('biobio') || lower.includes('cnn') || lower.includes('bbc') || lower.includes('reuters') || lower.includes('24horas')) return 'center';
 
     return 'center';
 }
 
 
 /**
- * Basic MVP Clustering Logic
- * Groups stories by simple title similarity (Jaccard Index) within a time window.
+ * Advanced Clustering Logic (Bias 2.0)
  */
 export function clusterStories(stories: NewsItem[]): StoryCluster[] {
     const clusters: StoryCluster[] = [];
-    // Lowered threshold significantly to encourage grouping diverse titles about the same topic
     const threshold = 0.12;
 
-    // Sort by date desc and enrich with bias
+    // Enrich with bias
     const sortedStories = stories.map(s => ({
         ...s,
         bias: getBiasForSource(s.source)
@@ -198,21 +210,28 @@ export function clusterStories(stories: NewsItem[]): StoryCluster[] {
     for (const story of sortedStories) {
         let foundCluster = false;
 
-        // Try to fit into existing clusters
         for (const cluster of clusters) {
-            // Check if story falls within 48h (wider window)
             const timeDiff = Math.abs(new Date(story.publishedAt).getTime() - new Date(cluster.firstPublishedAt).getTime());
             const hoursDiff = timeDiff / (1000 * 60 * 60);
 
             if (hoursDiff < 48) {
-                // Check title similarity with the main title of the cluster
                 const similarity = jaccardSimilarity(story.title, cluster.mainTitle);
                 if (similarity > threshold) {
                     cluster.items.push(story);
+
                     // Update bias distribution
                     if (story.bias) {
                         cluster.biasDistribution[story.bias]++;
                     }
+
+                    // PRIORITIZE .cl DOMAIN for Main Title (Local Priority)
+                    // If current main title is NOT from .cl, and this new story IS from .cl, swap it.
+                    // This ensures the dashboard feels "Chilean" first.
+                    if (!cluster.mainTitle.includes('.cl') && story.url.includes('.cl')) {
+                        cluster.mainTitle = story.title;
+                        cluster.summary = story.description || story.title;
+                    }
+
                     foundCluster = true;
                     break;
                 }
@@ -220,32 +239,57 @@ export function clusterStories(stories: NewsItem[]): StoryCluster[] {
         }
 
         if (!foundCluster) {
-            // Create new cluster
             clusters.push({
                 id: crypto.randomUUID(),
                 mainTitle: story.title,
-                summary: story.description || story.title, // Use description if available
+                summary: story.description || story.title,
                 items: [story],
                 biasDistribution: {
-                    left: story.bias === 'left' ? 1 : 0,
-                    center: story.bias === 'center' ? 1 : 0,
-                    right: story.bias === 'right' ? 1 : 0
+                    'left': story.bias === 'left' ? 1 : 0,
+                    'center-left': story.bias === 'center-left' ? 1 : 0,
+                    'center': story.bias === 'center' ? 1 : 0,
+                    'center-right': story.bias === 'center-right' ? 1 : 0,
+                    'right': story.bias === 'right' ? 1 : 0
                 },
                 firstPublishedAt: story.publishedAt
             });
         }
     }
 
+    // CALCULATE BLINDSPOTS
+    // Blindspot = Story covered significantly (>0) by one side's block, but 0 by the other.
+    // Blocks: Left Block (Left + Center-Left), Right Block (Right + Center-Right).
+    // Center is neutral.
+    clusters.forEach(c => {
+        const leftBlock = c.biasDistribution['left'] + c.biasDistribution['center-left'];
+        const rightBlock = c.biasDistribution['right'] + c.biasDistribution['center-right'];
+        const total = leftBlock + rightBlock + c.biasDistribution['center'];
+
+        // Only detect blindspots if we have enough signals (at least 2  articles usually, or 1 strong)
+        if (total > 0) {
+            if (leftBlock > 0 && rightBlock === 0) {
+                // Right is ignoring this -> Blindspot for the Right (Shown to user as "Blindspot Derecha"?)
+                // Actually, usually tools say "Left Blindspot" to mean "The Left is MISSING this".
+                // Ground News uses "Blindspot" labels to indicate which side is ignoring it.
+                // If only Left covers it, it is a "Right Blindspot" (The Right is blind to it).
+                c.blindspot = true;
+                c.blindspotSide = 'right';
+            } else if (rightBlock > 0 && leftBlock === 0) {
+                c.blindspot = true;
+                c.blindspotSide = 'left';
+            }
+        }
+    });
+
     return clusters;
 }
 
 // Helper: Improved Jaccard Similarity
 function jaccardSimilarity(str1: string, str2: string): number {
-    // Remove punctuation and keep only significant words (>2 chars) to match "Trump" vs "Trump's" etc
     const clean = (str: string) =>
         new Set(
             str.toLowerCase()
-                .replace(/[^\w\s]/g, '') // Remove punctuation
+                .replace(/[^\w\s]/g, '')
                 .split(/\s+/)
                 .filter(w => w.length > 2)
         );
