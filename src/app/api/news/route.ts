@@ -116,7 +116,8 @@ export async function GET(request: Request) {
                 title: article.title.split(' - ')[0],
                 source: article.source.name,
                 publishedAt: article.publishedAt,
-                description: article.description
+                description: article.description,
+                urlToImage: article.urlToImage
             }));
 
         // Cluster

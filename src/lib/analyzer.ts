@@ -7,6 +7,7 @@ export interface NewsItem {
     source: string;
     publishedAt: string; // ISO date string
     description?: string;
+    urlToImage?: string; // Image URL from API
     bias?: 'left' | 'center' | 'right'; // Added for UI display
 }
 
