@@ -2,30 +2,31 @@
 
 import { useState, useEffect } from 'react';
 import { StoryCard } from '@/components/StoryCard';
-import type { StoryCluster } from '@/lib/analyzer';
+import { CHILE_LEFT_LIST, CHILE_RIGHT_CENTER_LIST, type StoryCluster } from '@/lib/analyzer';
 import { RefreshCw, Globe, MapPin, Search, Clock, MessageSquare, Newspaper } from 'lucide-react';
 import clsx from 'clsx';
 
 type Tab = 'nacional' | 'internacional' | 'anglo';
-type TimeRange = 'hour' | 'day' | 'any';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('nacional');
   const [activeCategory, setActiveCategory] = useState<string>('general');
-  const [timeRange, setTimeRange] = useState<TimeRange>('any');
+  const [selectedDate, setSelectedDate] = useState<string>(''); // YYYY-MM-DD
+  const [selectedSource, setSelectedSource] = useState<string>('');
   const [clusters, setClusters] = useState<StoryCluster[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchNews = async (scope: Tab, query: string, range: TimeRange, category: string) => {
+  const fetchNews = async (scope: Tab, query: string, category: string, date: string, source: string) => {
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({ scope });
       if (query.trim()) params.append('q', query.trim());
-      if (range !== 'any') params.append('time_range', range);
       if (category !== 'general') params.append('category', category);
+      if (date) params.append('date', date);
+      if (source) params.append('source', source);
 
       const res = await fetch(`/api/news?${params.toString()}`);
       const data = await res.json();
@@ -33,10 +34,7 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
 
       if (data.clusters.length === 0) {
-        let msg = "No se encontraron noticias recientes.";
-        if (range === 'hour') msg = "No hay noticias en la última hora.";
-        if (range === 'day') msg = "No hay noticias en las últimas 24 horas.";
-        setError(msg);
+        setError("No se encontraron noticias para esta selección.");
         setClusters([]);
       } else {
         setClusters(data.clusters);
@@ -52,19 +50,20 @@ export default function Home() {
 
   // Initial load
   useEffect(() => {
-    fetchNews(activeTab, searchQuery, timeRange, activeCategory);
-  }, [activeTab, timeRange, activeCategory]);
+    fetchNews(activeTab, searchQuery, activeCategory, selectedDate, selectedSource);
+  }, [activeTab, activeCategory, selectedDate, selectedSource]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Search overrides category usually, but here we can keep category if we wanted strict filtering.
-    // However, backend logic currently prioritizes 'q' if present over 'category' keywords.
-    // So if user types, it's a manual search.
-    fetchNews(activeTab, searchQuery, timeRange, activeCategory);
+    fetchNews(activeTab, searchQuery, activeCategory, selectedDate, selectedSource);
   };
 
-  const handleTimeChange = (range: TimeRange) => {
-    setTimeRange(range);
+  const handleSourceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedSource(e.target.value);
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value);
   };
 
   const handleCategoryChange = (cat: string) => {
@@ -107,7 +106,7 @@ export default function Home() {
 
             {/* Refresh */}
             <button
-              onClick={() => fetchNews(activeTab, searchQuery, timeRange, activeCategory)}
+              onClick={() => fetchNews(activeTab, searchQuery, activeCategory, selectedDate, selectedSource)}
               disabled={loading}
               className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-full text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all disabled:opacity-50 whitespace-nowrap"
             >
@@ -163,37 +162,47 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Time Filters */}
-          <div className="flex items-center gap-2 text-sm bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-x-auto max-w-full">
-            <Clock className="w-4 h-4 text-gray-400 ml-2 hidden sm:block" />
+          {/* Source Filter */}
+          <div className="flex items-center gap-2 text-sm bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <Newspaper className="w-4 h-4 text-gray-400 ml-2" />
+            <select
+              value={selectedSource}
+              onChange={handleSourceChange}
+              className="bg-transparent border-none text-sm text-gray-700 dark:text-gray-200 focus:ring-0 outline-none p-1 cursor-pointer w-40"
+            >
+              <option value="">Todas las fuentes</option>
+              <optgroup label="Izquierda / Independiente">
+                {CHILE_LEFT_LIST.map(domain => (
+                  <option key={domain} value={domain}>{domain}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Centro / Derecha">
+                {CHILE_RIGHT_CENTER_LIST.map(domain => (
+                  <option key={domain} value={domain}>{domain}</option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
 
-            <button
-              onClick={() => handleTimeChange('hour')}
-              className={clsx(
-                "px-3 py-1.5 rounded-md font-medium transition-all text-xs uppercase tracking-wide whitespace-nowrap",
-                timeRange === 'hour' ? "bg-red-100 text-red-700 border border-red-200" : "text-gray-500 hover:bg-gray-100"
-              )}
-            >
-              Última Hora
-            </button>
-            <button
-              onClick={() => handleTimeChange('day')}
-              className={clsx(
-                "px-3 py-1.5 rounded-md font-medium transition-all text-xs uppercase tracking-wide whitespace-nowrap",
-                timeRange === 'day' ? "bg-orange-100 text-orange-700 border border-orange-200" : "text-gray-500 hover:bg-gray-100"
-              )}
-            >
-              24 Horas
-            </button>
-            <button
-              onClick={() => handleTimeChange('any')}
-              className={clsx(
-                "px-3 py-1.5 rounded-md font-medium transition-all text-xs uppercase tracking-wide whitespace-nowrap",
-                timeRange === 'any' ? "bg-gray-100 text-gray-700 border border-gray-200" : "text-gray-500 hover:bg-gray-100"
-              )}
-            >
-              Todo
-            </button>
+          {/* Date Filter */}
+          <div className="flex items-center gap-2 text-sm bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <Clock className="w-4 h-4 text-gray-400 ml-2" />
+            <span className="text-xs font-bold text-gray-500 uppercase mr-1">Fecha:</span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              className="bg-transparent border-none text-sm text-gray-700 dark:text-gray-200 focus:ring-0 outline-none p-1 cursor-pointer"
+            />
+            {selectedDate && (
+              <button
+                onClick={() => setSelectedDate('')}
+                className="text-xs text-red-500 hover:text-red-700 font-bold px-2"
+                title="Borrar fecha"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
@@ -228,7 +237,7 @@ export default function Home() {
           <div className="text-center text-sm text-gray-500">
             Resultados para: <span className="font-bold text-gray-800 dark:text-gray-200">"{searchQuery}"</span>
             <button
-              onClick={() => { setSearchQuery(''); fetchNews(activeTab, '', timeRange, activeCategory); }}
+              onClick={() => { setSearchQuery(''); fetchNews(activeTab, '', activeCategory, selectedDate, selectedSource); }}
               className="ml-2 text-indigo-500 hover:underline text-xs"
             >
               (Limpiar búsqueda)
@@ -241,10 +250,10 @@ export default function Home() {
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-8 rounded-xl text-center">
             <p className="font-bold text-lg mb-2">⚠️ {error}</p>
             <p className="text-sm opacity-80">
-              Intenta cambiar el filtro de tiempo a "Todo" o busca otro término.
+              Intenta cambiar la fecha o busca otro término.
             </p>
             <button
-              onClick={() => handleTimeChange('any')}
+              onClick={() => { setSelectedDate(''); setSelectedSource(''); fetchNews(activeTab, '', activeCategory, '', ''); }}
               className="mt-4 px-4 py-2 bg-white border border-yellow-300 rounded-lg text-sm font-semibold hover:bg-yellow-100 transition-colors"
             >
               Ver Todo

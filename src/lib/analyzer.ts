@@ -21,7 +21,7 @@ export interface NewsItem {
 
 // CHILE
 // "Left" / Progressive / Independent set to counterbalance the heavy Right/Conservative duopoly
-export const CHILE_LEFT = [
+export const CHILE_LEFT_LIST = [
     'elmostrador.cl',
     'eldesconcierto.cl',
     'theclinic.cl',
@@ -32,9 +32,10 @@ export const CHILE_LEFT = [
     'radio.uchile.cl',
     'interferencia.cl',
     'ciperchile.cl'
-].join(',');
+];
+export const CHILE_LEFT = CHILE_LEFT_LIST.join(',');
 
-export const CHILE_RIGHT_CENTER = [
+export const CHILE_RIGHT_CENTER_LIST = [
     'latercera.com',
     'biobiochile.cl',
     'emol.com',
@@ -43,7 +44,8 @@ export const CHILE_RIGHT_CENTER = [
     'radioagricultura.cl',
     'adnradio.cl',
     'meganoticias.cl'
-].join(',');
+];
+export const CHILE_RIGHT_CENTER = CHILE_RIGHT_CENTER_LIST.join(',');
 
 // Combined for fallback
 export const CHILE_DOMAINS = `${CHILE_LEFT},${CHILE_RIGHT_CENTER}`;

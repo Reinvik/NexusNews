@@ -12,7 +12,8 @@ export async function GET(request: Request) {
     const scope = searchParams.get('scope') || 'nacional';
     const query = searchParams.get('q') || '';
     const category = searchParams.get('category') || '';
-    const timeRange = searchParams.get('time_range') || 'any';
+    const dateParam = searchParams.get('date'); // YYYY-MM-DD or empty
+    const sourceParam = searchParams.get('source'); // Specific domain
 
     const CATEGORY_QUERIES: Record<string, string> = {
         'general': '',
@@ -45,26 +46,22 @@ export async function GET(request: Request) {
             language = 'en';
         }
 
-        // 2. Time Calculation
-        let fromDate = '';
-        const now = new Date();
-
-        if (timeRange === 'hour') {
-            const oneHourAgo = new Date(now.getTime() - (60 * 60 * 1000));
-            fromDate = `&from=${oneHourAgo.toISOString()}`;
-        } else if (timeRange === 'day') {
-            const oneDayAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-            fromDate = `&from=${oneDayAgo.toISOString()}`;
-        } else {
-            // Default 'any' or 'week' -> Last 7 days to ensure freshness and relevance
-            // This helps capture "Left" media which might have lower volume/frequency
-            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-            fromDate = `&from=${sevenDaysAgo.toISOString()}`;
+        // OVERRIDE if specific source is selected
+        if (sourceParam) {
+            leftDomains = sourceParam;
+            rightDomains = '';
         }
 
+        // 2. Time/Date Calculation
+        let dateFilter = '';
+        if (dateParam) {
+            // If user selected a specific date
+            dateFilter = `&from=${dateParam}&to=${dateParam}`;
+        }
+        // If no date selected, we don't send 'from'/'to' to get the latest news available (API default)
+
         // 3. Construct URLs (Balanced Strategy)
-        // INCREASED TO 100 to maximize diversity
-        const pageSize = 100;
+        const pageSize = 50;
         let articles: any[] = [];
 
         const fetchNews = async (domains: string) => {
@@ -80,9 +77,9 @@ export async function GET(request: Request) {
             if (finalQuery) {
                 // strict match on domains is cleaner without 'domains=' sometimes if query is complex, 
                 // but we need to restrict to OUR domains to ensure bias balance.
-                url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(finalQuery)}&domains=${domains}&language=${language}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${apiKey}${fromDate}`;
+                url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(finalQuery)}&domains=${domains}&language=${language}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${apiKey}${dateFilter}`;
             } else {
-                url = `https://newsapi.org/v2/everything?domains=${domains}&language=${language}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${apiKey}${fromDate}`;
+                url = `https://newsapi.org/v2/everything?domains=${domains}&language=${language}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${apiKey}${dateFilter}`;
             }
 
             try {
