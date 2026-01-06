@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, ExternalLink, EyeOff } from 'lucide-react';
 import { BiasBar } from './BiasBar';
-import type { StoryCluster, BiasType } from '@/lib/analyzer'; // Import BiasType
+import type { StoryCluster, BiasType } from '@/lib/analyzer';
 
 interface StoryCardProps {
     cluster: StoryCluster;
@@ -16,7 +16,17 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
     const visibleItems = isExpanded ? cluster.items : cluster.items.slice(0, 3);
     const hasMore = cluster.items.length > 3;
 
-    const [analysis, setAnalysis] = useState<string | null>(null);
+    interface AnalysisResult {
+        framing: string | Record<string, string>;
+        omissions: string[] | Record<string, string>;
+        neutrality_score: number | string;
+        polarization_score: number | string;
+        key_contradictions: string[];
+        greatest_discrepancy?: string | Record<string, string>;
+        summary: string;
+    }
+
+    const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     const handleAnalyze = async (e: React.MouseEvent) => {
@@ -35,11 +45,10 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
             if (data.analysis) {
                 setAnalysis(data.analysis);
             } else {
-                setAnalysis("No se pudo obtener el análisis. Inténtalo de nuevo.");
+                console.error("No analysis data returned");
             }
         } catch (error) {
             console.error(error);
-            setAnalysis("Error de conexión con la IA.");
         } finally {
             setIsAnalyzing(false);
         }
@@ -126,16 +135,128 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                             ) : (
                                 <>
                                     <span className="text-indigo-500 text-base">✨</span>
-                                    {analysis ? 'Análisis Completado' : 'Analizar Contradicciones y Sesgo'}
+                                    {analysis ? 'Análisis Completado' : 'Analizar Discrepancias y Omisiones'}
                                 </>
                             )}
                         </button>
 
-                        {/* ANALYSIS RESULT */}
+                        {/* ADVANCED AI REPORT */}
                         {analysis && (
-                            <div className="mt-3 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-800/30 text-xs sm:text-sm text-gray-700 dark:text-gray-300 animate-in fade-in slide-in-from-top-2">
-                                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed">
-                                    {analysis.replace(/\*\*/g, '').replace(/###/g, '')}
+                            <div className="mt-4 animate-in fade-in slide-in-from-top-2 space-y-3">
+
+                                {/* 0. Greatest Discrepancy Highlight */}
+                                {analysis.greatest_discrepancy && (
+                                    <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border-l-4 border-indigo-500 shadow-sm">
+                                        <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                            <span className="text-lg">⚡</span> Punto de Mayor Fricción
+                                        </div>
+                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
+                                            {typeof analysis.greatest_discrepancy === 'object' ? (
+                                                <ul className="list-disc pl-4 space-y-1 mt-1">
+                                                    {Object.entries(analysis.greatest_discrepancy).map(([k, v], i) => (
+                                                        <li key={i}><span className="font-bold">{k}:</span> {String(v)}</li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                `"${analysis.greatest_discrepancy}"`
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 1. Framing - "Under what lens?" */}
+                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                                    <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
+                                        Estrategia de Encuadre (Framing)
+                                    </div>
+                                    <div className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
+                                        {typeof analysis.framing === 'object' ? (
+                                            <ul className="list-disc pl-4 space-y-1 mt-1">
+                                                {Object.entries(analysis.framing).map(([k, v], i) => (
+                                                    <li key={i}><span className="font-bold">{k}:</span> {String(v)}</li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            analysis.framing
+                                        )}
+                                    </div>
+                                </div>
+
+
+
+                                {/* 2. Neutrality & Polarization Thermometer */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* Neutrality */}
+                                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                            Índice de Neutralidad
+                                        </div>
+                                        <div className="flex items-end gap-2">
+                                            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                                                {Number(analysis.neutrality_score) || 5}<span className="text-sm text-gray-400 font-normal">/10</span>
+                                            </span>
+                                            <div className="flex-1 pb-1.5">
+                                                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
+                                                        style={{ width: `${(Number(analysis.neutrality_score) || 5) * 10}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Polarization */}
+                                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                            Nivel de Polarización
+                                        </div>
+                                        <div className="flex items-end gap-2">
+                                            <span className={`text-2xl font-black ${(Number(analysis.polarization_score) || 5) > 7 ? 'text-red-500' : 'text-green-500'}`}>
+                                                {Number(analysis.polarization_score) || 5}<span className="text-sm text-gray-400 font-normal">/10</span>
+                                            </span>
+                                            <span className="text-[10px] text-gray-400 font-medium pb-1.5">
+                                                {(Number(analysis.polarization_score) || 5) > 7 ? 'Crítico' : 'Estable'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 3. Auditoría de Omisiones */}
+                                {(Array.isArray(analysis.omissions) ? analysis.omissions : (analysis.omissions ? [analysis.omissions] : [])).length > 0 && (
+                                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800/30">
+                                        <div className="flex items-center gap-1.5 mb-2">
+                                            <span className="text-amber-500">⚠️</span>
+                                            <div className="text-[10px] font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider">
+                                                Auditoría de Datos Omitidos
+                                            </div>
+                                        </div>
+                                        <ul className="space-y-1.5">
+                                            {Array.isArray(analysis.omissions) ? (
+                                                analysis.omissions.map((omission, idx) => (
+                                                    <li key={idx} className="text-xs text-gray-700 dark:text-gray-300 flex gap-2">
+                                                        <span className="text-amber-400/50">•</span>
+                                                        {typeof omission === 'object' ? JSON.stringify(omission) : omission}
+                                                    </li>
+                                                ))
+                                            ) : (
+                                                typeof analysis.omissions === 'object' ? (
+                                                    Object.entries(analysis.omissions).map(([k, v], i) => (
+                                                        <li key={i} className="text-xs text-gray-700 dark:text-gray-300 flex gap-2">
+                                                            <span className="text-amber-400/50">•</span>
+                                                            <span className="font-bold">{k}:</span> {String(v)}
+                                                        </li>
+                                                    ))
+                                                ) : (
+                                                    <li className="text-xs text-gray-700 dark:text-gray-300">{String(analysis.omissions)}</li>
+                                                )
+                                            )}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                <div className="text-[10px] text-center text-gray-400 pt-1">
+                                    Análisis generado por IA • Puede contener alucinaciones
                                 </div>
                             </div>
                         )}
@@ -150,13 +271,13 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                         </div>
 
                         <div className="divide-y divide-gray-200/50 dark:divide-gray-800">
-                            {visibleItems.map((item, i) => { // Reduced from 5 to 3 for compactness
+                            {visibleItems.map((item, i) => {
                                 // Extract domain for favicon
                                 let domain = '';
                                 try {
                                     domain = new URL(item.url).hostname;
                                 } catch (e) {
-                                    domain = 'google.com'; // fallback
+                                    domain = 'google.com';
                                 }
                                 const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
@@ -217,7 +338,6 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
     );
 };
 
-// Updated Badge for 5-Point Scale
 const BiasBadge = ({ bias }: { bias?: BiasType }) => {
     if (!bias) return <span className="text-xs text-gray-400">-</span>;
 

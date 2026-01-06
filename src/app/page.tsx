@@ -24,7 +24,7 @@ export default function Home() {
     setError(null);
     try {
       // Updated cache key version to invalidate old caches on deployment/update
-      const CACHE_VERSION = 'v3';
+      const CACHE_VERSION = 'v4';
       const cacheKey = `news_cache_${scope}_${category}_${date}_${source}_${provider}_${query}_${CACHE_VERSION}`;
 
       // 1. Try Cache if not forced

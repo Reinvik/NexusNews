@@ -53,40 +53,54 @@ export class GeminiProcessor {
         }
     }
 
-    async analyzeCluster(articles: NewsItem[]): Promise<string> {
-        if (!this.model || articles.length === 0) return "No se pudo realizar el análisis. (Modelo no disponible o sin artículos)";
+    async analyzeCluster(articles: NewsItem[]): Promise<any> {
+        if (!this.model || articles.length === 0) return null;
 
         const simplifiedList = articles.map(a =>
             `- Fuente: ${a.source} (${a.bias || 'Unknown'})\n  Titular: ${a.title}\n  Resumen: ${a.description || ''}`
         ).join('\n\n');
 
         const prompt = `
-        Actúa como un analista de medios experto y neutral. Analiza el siguiente grupo de noticias que cubren el MISMO evento pero desde diferentes fuentes.
-        
-        Tu objetivo es detectar:
-        1. **Contradicciones**: ¿Hay hechos, cifras o interpretaciones que chocan directamente entre las fuentes?
-        2. **Sesgos Evidentes**: Señala lenguaje emocional, omisión de datos clave o encuadres tendenciosos de fuentes específicas (menciona la fuente).
-        3. **Puntos de Vista**: Resume brevemente los ángulos principales (ej. "La prensa económica se enfoca en X, mientras que la prensa social destaca Y").
+        Actúa como un analista político senior experto en el ecosistema de medios. Realiza una AUDITORÍA DE DATOS comparativa sobre este grupo de noticias que cubren el mismo evento.
 
-        Si no hay contradicciones importantes, indícalo. Sé conciso y directo.
+        Tu objetivo es detectar lo que NO se dice y cómo se dice.
 
-        Noticias a analizar:
+        Analiza los siguientes puntos:
+        1. **Framing (Marco)**: ¿Bajo qué lente presenta la noticia cada grupo? (Ej: Económico vs Derechos Humanos, Seguridad vs Social).
+        2. **Auditoría de Omisión**: ¿Qué hechos clave, cifras o nombres menciona una fuente que otras ignoran deliberadamente?
+        3. **Termómetro de Neutralidad**: Asigna un puntaje del 1 al 10 (1=Propaganda/Clickbait, 10=Periodismo de Datos Objetivo).
+        4. **Adjetivos Polarizantes**: Identifica los términos más cargados emocionalmente.
+        5. **MAYOR DISCREPANCIA**: Identifica la contradicción o punto de fricción más importante entre las versiones. Resume en 1 frase cul es el desacuerdo central.
+
+        Input:
         ${simplifiedList}
 
-        Formato de respuesta (Markdown):
-        ### 🔍 Análisis de Contradicciones y Sesgos
-        * **Contradicciones Principales**: ...
-        * **Sesgos Detectados**: ...
-        * **Resumen de Perspectivas**: ...
+        Formato de Salida (JSON Estricto):
+        {
+            "framing": "Resumen del encuadre",
+            "omissions": ["Omisión 1", "Omisión 2"],
+            "polarization_score": number, // 1 a 10
+            "neutrality_score": number, // 1 a 10
+            "key_contradictions": ["Contradicción 1"],
+            "greatest_discrepancy": "Resumen de la discrepancia más grande (ej: 'El Medio A dice X mientras Medio B asegura Y')",
+            "summary": "Breve síntesis."
+        }
+
+        Retorna SOLO el JSON válido. Sin bloques de código markdown.
         `;
 
         try {
             const result = await this.model.generateContent(prompt);
             const response = await result.response;
-            return response.text();
+            const text = response.text();
+
+            // Clean markdown
+            const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            return JSON.parse(cleanText);
         } catch (error) {
             console.error("Gemini Analysis Error:", error);
-            return "Ocurrió un error al generar el análisis con IA.";
+            return null;
         }
     }
 }

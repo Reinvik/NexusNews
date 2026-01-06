@@ -296,32 +296,47 @@ export function clusterStories(stories: NewsItem[]): StoryCluster[] {
         }
     });
 
-    // FILTER: Enforce Diversity (Minimum 2 distinct political leanings)
-    // "no quiero que muestren solo 1 noticia que es solo de un medio minimo deben haber 2 tendencias politicas distintas"
-    const diverseClusters = clusters.filter(c => {
-        // 1. Must have at least 2 items
+    // FILTER: Enforce Diversity OR Blindspot Value
+    // User Requirement: "aglomere las noticias 2 puntos de vista o mas, no quiero solo una noticia con un punto de vista"
+    // Interpretation: 
+    // 1. Cluster must have >= 2 items (comparison requires plurality).
+    // 2. Cluster must have >= 2 DISTINCT BIASES *OR* be a flagged Blindspot (which implies significant coverage from one side but 0 from other).
+
+    // Filter logic extracted to exported function
+    const diverseClusters = filterDiverseClusters(clusters);
+
+    console.log(`[DIVERSITY CHECK] Dropped ${clusters.length - diverseClusters.length} clusters. Kept ${diverseClusters.length}.`);
+
+    return diverseClusters;
+}
+
+/**
+ * Filters clusters to ensure diversity and quality.
+ * Criteria:
+ * 1. Must have at least 2 items (Item Count >= 2).
+ * 2. Must have at least 2 distinct biases OR be a valid Blindspot.
+ *    - Blindspot = Significant coverage from one side (Left/Right) but 0 from the other.
+ */
+export function filterDiverseClusters(clusters: StoryCluster[]): StoryCluster[] {
+    return clusters.filter(c => {
+        // 1. Must have at least 2 items (A cluster of 1 is not a cluster)
         if (c.items.length < 2) return false;
 
-        // 2. Removed strict diversity check to allow blindspots and more news
-        // "no importa si son mas antiguas... o noticias que al menos tienes 2 diferentes puntos"
-        // User agreed to relax this to see more content.
+        // 2. Count distinct biases present (count > 0)
+        const presentLeanings = Object.values(c.biasDistribution).filter(count => count > 0).length;
 
-        // const presentLeanings = Object.values(c.biasDistribution).filter(count => count > 0).length;
-        // if (presentLeanings < 2) {
-        //     return false;
-        // }
+        // 3. Acceptance Criteria:
+        // - Diversity: At least 2 different leanings (e.g., Left + Center)
+        // - OR Blindspot: Only 1 leaning block but significant enough to be flagged as Blindspot
 
-        return true;
+        if (presentLeanings >= 2 || c.blindspot) {
+            return true;
+        }
+
+        return false;
     });
 
-    console.log(`[DIVERSITY CHECK] Dropped ${clusters.length - diverseClusters.length} clusters due to low diversity.`);
-
-    // FALLBACK: If diversity filter kills everything, return best effort (original clusters)
-    // We prioritize showing SOMETHING over showing nothing.
-    if (diverseClusters.length === 0 && clusters.length > 0) {
-        console.warn("[DIVERSITY CHECK] Strict diversity filter removed all news. Falling back to less strict clusters.");
-        return clusters;
-    }
+    console.log(`[DIVERSITY CHECK] Dropped ${clusters.length - diverseClusters.length} clusters. Kept ${diverseClusters.length}.`);
 
     return diverseClusters;
 }

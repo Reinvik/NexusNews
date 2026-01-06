@@ -17,13 +17,6 @@ export const metadata: Metadata = {
   title: "Nexus News",
   description: "Multipolar News Aggregator",
   manifest: "/manifest.json",
-  themeColor: "#4f46e5",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -31,8 +24,16 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/icon.svg",
-    apple: "/icon.svg", // Reusing SVG for now, usually needs PNG but Chrome/Safari often handle it or fallback
+    apple: "/icon.svg",
   }
+};
+
+export const viewport = {
+  themeColor: "#4f46e5",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

@@ -560,7 +560,12 @@ export async function GET(request: Request) {
                             blindspot,
                             blindspotSide
                         };
-                    }).filter(Boolean);
+                    }).filter((Boolean) as any) as StoryCluster[];
+
+                    // --- APPLY DIVERSITY FILTER TO GEMINI CLUSTERS ---
+                    const initialCount = clusters.length;
+                    clusters = filterDiverseClusters(clusters);
+                    console.log(`[GEMINI DIVERSITY] Dropped ${initialCount - clusters.length} clusters. Kept ${clusters.length}.`);
                 }
             } catch (e) {
                 console.error("[GEMINI] Failed to cluster:", e);
