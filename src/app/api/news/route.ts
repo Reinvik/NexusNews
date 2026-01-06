@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import {
     clusterStories,
+    filterDiverseClusters,
+    type StoryCluster,
     type NewsItem,
     CHILE_LEFT, CHILE_RIGHT_CENTER,
     INTL_LEFT, INTL_RIGHT_CENTER,

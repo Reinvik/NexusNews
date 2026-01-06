@@ -336,9 +336,7 @@ export function filterDiverseClusters(clusters: StoryCluster[]): StoryCluster[] 
         return false;
     });
 
-    console.log(`[DIVERSITY CHECK] Dropped ${clusters.length - diverseClusters.length} clusters. Kept ${diverseClusters.length}.`);
 
-    return diverseClusters;
 }
 
 // Helper: Extract Capitalized Words (Potential Entities like "Maduro", "Kast", "Boric")
