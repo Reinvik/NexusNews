@@ -74,6 +74,8 @@ export const MOCK_CLUSTERS: StoryCluster[] = [
             }
         ],
         biasDistribution: { "center-right": 2, "left": 0, "center": 0, "center-left": 0, "right": 0 },
+        blindspot: true,
+        blindspotSide: 'left',
         firstPublishedAt: new Date().toISOString()
     }
 ];
