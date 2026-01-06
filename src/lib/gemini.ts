@@ -61,29 +61,43 @@ export class GeminiProcessor {
         ).join('\n\n');
 
         const prompt = `
-        Actúa como un analista político senior experto en el ecosistema de medios. Realiza una AUDITORÍA DE DATOS comparativa sobre este grupo de noticias que cubren el mismo evento.
+        Actúa como un Auditor de Datos y Analista Político Senior experto en el ecosistema de medios chileno.
 
-        Tu objetivo es detectar lo que NO se dice y cómo se dice.
+        CONTEXTO: Se te entregan un grupo de artículos sobre un mismo evento noticioso provenientes de diferentes fuentes. Tu misión es diseccionar la cobertura para exponer las discrepancias y los "puntos ciegos" informativos.
 
-        Analiza los siguientes puntos:
-        1. **Framing (Marco)**: ¿Bajo qué lente presenta la noticia cada grupo? (Ej: Económico vs Derechos Humanos, Seguridad vs Social).
-        2. **Auditoría de Omisión**: ¿Qué hechos clave, cifras o nombres menciona una fuente que otras ignoran deliberadamente?
-        3. **Termómetro de Neutralidad**: Asigna un puntaje del 1 al 10 (1=Propaganda/Clickbait, 10=Periodismo de Datos Objetivo).
-        4. **Adjetivos Polarizantes**: Identifica los términos más cargados emocionalmente.
-        5. **MAYOR DISCREPANCIA**: Identifica la contradicción o punto de fricción más importante entre las versiones. Resume en 1 frase cul es el desacuerdo central.
+        INSTRUCCIONES DE ANÁLISIS:
+        Realiza una "Auditoría Lineal" de cada fuente proporcionada. Para cada artículo, identifica su framing (enfoque), lo que oculta (puntos ciegos) y un adjetivo crítico que defina su tono.
 
-        Input:
-        ${simplifiedList}
+        FORMATO DE SALIDA (ESTRICTO JSON):
+        Debes responder únicamente con un objeto JSON siguiendo esta estructura:
 
-        Formato de Salida (JSON Estricto):
         {
-            "framing": "Resumen del encuadre",
-            "omissions": ["Omisión 1", "Omisión 2"],
-            "polarization_score": number, // 1 a 10
-            "neutrality_score": number, // 1 a 10
-            "key_contradictions": ["Contradicción 1"],
-            "greatest_discrepancy": "Resumen de la discrepancia más grande (ej: 'El Medio A dice X mientras Medio B asegura Y')",
-            "summary": "Breve síntesis."
+            "resumen_ejecutivo": "Identifica el patrón general...",
+            "auditoria_lineal": [
+                // DEBE haber una entrada por cada artículo provisto, en el MISMO ORDEN.
+                {
+                    "meta": {
+                        "sesgo": "Izquierda",
+                        "medio": "La Tercera",
+                        "titular": "..."
+                    },
+                    "analisis_especifico": {
+                        "framing": "...",
+                        "puntos_ciegos": "...",
+                        "adjetivo_critico": "..."
+                    },
+                    "kpis": {
+                        "polarizacion": 1-10,
+                        "neutralidad": 1-10,
+                        "sensacionalismo": 1-10
+                    }
+                }
+                // ... repite para CADA artículo en el input
+            ],
+            "kpis": {
+                "polarizacion": 8.2, // Escala 1-10
+                "diversidad": "ALTA" | "MEDIA" | "BAJA"
+            }
         }
 
         Retorna SOLO el JSON válido. Sin bloques de código markdown.

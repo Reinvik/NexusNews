@@ -465,11 +465,12 @@ export async function GET(request: Request) {
         // --- MOCK FALLBACK (Only if EVERYTHING failed) ---
         if (articles.length === 0) {
             console.warn("⚠️ ALL APIs failed. Serving MOCK DATA.");
-            // Serve mock data but filtered if possible, or just default mocks
-            // We use the imported MOCK_CLUSTERS or a local hardcoded one if the import fails logic (but we corrected import)
             if (MOCK_CLUSTERS && MOCK_CLUSTERS.length > 0) {
-                // @ts-ignore
-                articles = MOCK_CLUSTERS.flatMap((c: any) => c.items || c.articles);
+                const diverseMocks = filterDiverseClusters(MOCK_CLUSTERS);
+                return NextResponse.json({
+                    clusters: diverseMocks,
+                    warning: "All APIs Failed - Serving Mock Data"
+                });
             }
         }
 

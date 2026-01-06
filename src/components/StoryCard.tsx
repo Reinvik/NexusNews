@@ -17,13 +17,28 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
     const hasMore = cluster.items.length > 3;
 
     interface AnalysisResult {
-        framing: string | Record<string, string>;
-        omissions: string[] | Record<string, string>;
-        neutrality_score: number | string;
-        polarization_score: number | string;
-        key_contradictions: string[];
-        greatest_discrepancy?: string | Record<string, string>;
-        summary: string;
+        resumen_ejecutivo: string;
+        auditoria_lineal: Array<{
+            meta: {
+                sesgo: string;
+                medio: string;
+                titular: string;
+            };
+            analisis_especifico: {
+                framing: string;
+                puntos_ciegos: string;
+                adjetivo_critico: string;
+            };
+            kpis: {
+                polarizacion: number;
+                neutralidad: number;
+                sensacionalismo: number;
+            };
+        }>;
+        kpis: {
+            polarizacion: number;
+            diversidad: "ALTA" | "MEDIA" | "BAJA";
+        };
     }
 
     const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -60,7 +75,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
             {/* BLINDSPOT BADGE */}
             <div className="flex flex-col h-full">
                 {/* HERO IMAGE SECTION - Top Position */}
-                <div className="w-full relative overflow-hidden bg-gray-100 dark:bg-gray-900 h-48 sm:h-56 shrink-0">
+                <div className="w-full relative overflow-hidden bg-gray-100 dark:bg-gray-900 aspect-video shrink-0">
                     {/* BLINDSPOT BADGE - Positioned over image */}
                     {cluster.blindspot && (
                         <div className="absolute top-0 right-0 z-20">
@@ -140,205 +155,202 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                             )}
                         </button>
 
-                        {/* ADVANCED AI REPORT */}
+                        {/* ADVANCED AI REPORT VS 2.1 (Restored KPIs & Link) */}
                         {analysis && (
-                            <div className="mt-4 animate-in fade-in slide-in-from-top-2 space-y-3">
+                            <div className="mt-5 animate-in fade-in slide-in-from-top-2 space-y-4">
 
-                                {/* 0. Greatest Discrepancy Highlight */}
-                                {analysis.greatest_discrepancy && (
-                                    <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border-l-4 border-indigo-500 shadow-sm">
-                                        <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                            <span className="text-lg">⚡</span> Punto de Mayor Fricción
-                                        </div>
-                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
-                                            {typeof analysis.greatest_discrepancy === 'object' ? (
-                                                <ul className="list-disc pl-4 space-y-1 mt-1">
-                                                    {Object.entries(analysis.greatest_discrepancy).map(([k, v], i) => (
-                                                        <li key={i}><span className="font-bold">{k}:</span> {String(v)}</li>
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                `"${analysis.greatest_discrepancy}"`
-                                            )}
+                                {/* 1. EXECUTIVE SUMMARY & KPIS */}
+                                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                                    <div className="flex justify-between items-start mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+                                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Resumen Ejecutivo</div>
+                                        <div className="flex gap-3">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-[10px] text-gray-400 font-bold uppercase">Polarización</span>
+                                                <span className={`text-xs font-black ${analysis.kpis.polarizacion > 7 ? 'text-red-500' : 'text-blue-500'}`}>{analysis.kpis.polarizacion}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-[10px] text-gray-400 font-bold uppercase">Diversidad</span>
+                                                <span className="text-xs font-black text-indigo-600">{analysis.kpis.diversidad}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                )}
-
-                                {/* 1. Framing - "Under what lens?" */}
-                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30">
-                                    <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
-                                        Estrategia de Encuadre (Framing)
-                                    </div>
-                                    <div className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
-                                        {typeof analysis.framing === 'object' ? (
-                                            <ul className="list-disc pl-4 space-y-1 mt-1">
-                                                {Object.entries(analysis.framing).map(([k, v], i) => (
-                                                    <li key={i}><span className="font-bold">{k}:</span> {String(v)}</li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            analysis.framing
-                                        )}
-                                    </div>
+                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug italic">
+                                        "{analysis.resumen_ejecutivo}"
+                                    </p>
                                 </div>
 
+                                {/* 2. LINEAR AUDIT LIST */}
+                                <div className="space-y-3">
+                                    {analysis.auditoria_lineal.map((item, index) => {
+                                        // Match with original item to get URL if possible
+                                        const originalItem = cluster.items[index];
+                                        const itemUrl = originalItem?.url || '#';
 
-
-                                {/* 2. Neutrality & Polarization Thermometer */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    {/* Neutrality */}
-                                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                            Índice de Neutralidad
-                                        </div>
-                                        <div className="flex items-end gap-2">
-                                            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                                                {Number(analysis.neutrality_score) || 5}<span className="text-sm text-gray-400 font-normal">/10</span>
-                                            </span>
-                                            <div className="flex-1 pb-1.5">
-                                                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
-                                                        style={{ width: `${(Number(analysis.neutrality_score) || 5) * 10}%` }}
+                                        return (
+                                            <a
+                                                key={index}
+                                                href={itemUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-md transition-shadow group/audit ring-1 ring-gray-100 dark:ring-gray-800"
+                                            >
+                                                {/* ROW 1: Source & Bias */}
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider border ${item.meta.sesgo.toLowerCase().includes('izquierda') ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                                                            item.meta.sesgo.toLowerCase().includes('derecha') ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                                'bg-purple-50 text-purple-700 border-purple-100'
+                                                        }`}>
+                                                        {item.meta.sesgo.split(' ')[0]}
+                                                    </span>
+                                                    {/* Favicon fallback using Google S2 */}
+                                                    <img
+                                                        src={`https://www.google.com/s2/favicons?domain=${new URL(itemUrl).hostname}&sz=64`}
+                                                        onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                                        className="w-4 h-4 rounded-sm opacity-80"
+                                                        alt=""
                                                     />
+                                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{item.meta.medio}</span>
+                                                    <ExternalLink className="w-3 h-3 text-gray-300 opacity-0 group-hover/audit:opacity-100 transition-opacity ml-auto" />
                                                 </div>
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    {/* Polarization */}
-                                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                            Nivel de Polarización
-                                        </div>
-                                        <div className="flex items-end gap-2">
-                                            <span className={`text-2xl font-black ${(Number(analysis.polarization_score) || 5) > 7 ? 'text-red-500' : 'text-green-500'}`}>
-                                                {Number(analysis.polarization_score) || 5}<span className="text-sm text-gray-400 font-normal">/10</span>
-                                            </span>
-                                            <span className="text-[10px] text-gray-400 font-medium pb-1.5">
-                                                {(Number(analysis.polarization_score) || 5) > 7 ? 'Crítico' : 'Estable'}
-                                            </span>
-                                        </div>
-                                    </div>
+                                                {/* ROW 2: Title */}
+                                                <h4 className="text-gray-800 dark:text-gray-200 italic text-sm font-serif leading-snug mb-3 hover:text-indigo-600 transition-colors">
+                                                    "{item.meta.titular}"
+                                                </h4>
+
+                                                {/* ROW 3: KPIs (New) */}
+                                                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2 mb-3 flex flex-wrap gap-4 border border-gray-100 dark:border-gray-800">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase">Polarización</span>
+                                                        <div className="h-1.5 w-12 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-red-500" style={{ width: `${(item.kpis?.polarizacion || 0) * 10}%` }} />
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{item.kpis?.polarizacion}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase">Neutralidad</span>
+                                                        <div className="h-1.5 w-12 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-blue-500" style={{ width: `${(item.kpis?.neutralidad || 0) * 10}%` }} />
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{item.kpis?.neutralidad}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase">Sensacionalismo</span>
+                                                        <div className="h-1.5 w-12 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-orange-500" style={{ width: `${(item.kpis?.sensacionalismo || 0) * 10}%` }} />
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{item.kpis?.sensacionalismo}</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* ROW 4, 5, 6: Analysis Details */}
+                                                <div className="space-y-2 text-xs">
+                                                    <div className="flex gap-2">
+                                                        <span className="font-bold text-indigo-600 dark:text-indigo-400 uppercase min-w-[80px]">Framing:</span>
+                                                        <span className="text-gray-700 dark:text-gray-300">{item.analisis_especifico.framing}</span>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <span className="font-bold text-amber-600 dark:text-amber-500 uppercase min-w-[80px]">Lo que oculta:</span>
+                                                        <span className="text-gray-600 dark:text-gray-400 italic">"{item.analisis_especifico.puntos_ciegos}"</span>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <span className="font-bold text-gray-500 uppercase min-w-[80px]">Tono:</span>
+                                                        <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-300 font-medium">
+                                                            {item.analisis_especifico.adjetivo_critico}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        );
+                                    })}
                                 </div>
 
-                                {/* 3. Auditoría de Omisiones */}
-                                {(Array.isArray(analysis.omissions) ? analysis.omissions : (analysis.omissions ? [analysis.omissions] : [])).length > 0 && (
-                                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800/30">
-                                        <div className="flex items-center gap-1.5 mb-2">
-                                            <span className="text-amber-500">⚠️</span>
-                                            <div className="text-[10px] font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider">
-                                                Auditoría de Datos Omitidos
-                                            </div>
-                                        </div>
-                                        <ul className="space-y-1.5">
-                                            {Array.isArray(analysis.omissions) ? (
-                                                analysis.omissions.map((omission, idx) => (
-                                                    <li key={idx} className="text-xs text-gray-700 dark:text-gray-300 flex gap-2">
-                                                        <span className="text-amber-400/50">•</span>
-                                                        {typeof omission === 'object' ? JSON.stringify(omission) : omission}
-                                                    </li>
-                                                ))
-                                            ) : (
-                                                typeof analysis.omissions === 'object' ? (
-                                                    Object.entries(analysis.omissions).map(([k, v], i) => (
-                                                        <li key={i} className="text-xs text-gray-700 dark:text-gray-300 flex gap-2">
-                                                            <span className="text-amber-400/50">•</span>
-                                                            <span className="font-bold">{k}:</span> {String(v)}
-                                                        </li>
-                                                    ))
-                                                ) : (
-                                                    <li className="text-xs text-gray-700 dark:text-gray-300">{String(analysis.omissions)}</li>
-                                                )
-                                            )}
-                                        </ul>
-                                    </div>
-                                )}
-
-                                <div className="text-[10px] text-center text-gray-400 pt-1">
-                                    Análisis generado por IA • Puede contener alucinaciones
+                                <div className="text-[10px] text-center text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-800 mt-4">
+                                    Auditoría generada por IA con información de los medios.
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {/* Compact List */}
-                    <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex-1">
-                        <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            <div className="col-span-2">Sesgo</div>
-                            <div className="col-span-2">Medio</div>
-                            <div className="col-span-8 text-right">Titular</div>
-                        </div>
+                    {/* Compact List - Only show if NO analysis is present */}
+                    {!analysis && (
+                        <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex-1">
+                            <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                <div className="col-span-2">Sesgo</div>
+                                <div className="col-span-2">Medio</div>
+                                <div className="col-span-8 text-right">Titular</div>
+                            </div>
 
-                        <div className="divide-y divide-gray-200/50 dark:divide-gray-800">
-                            {visibleItems.map((item, i) => {
-                                // Extract domain for favicon
-                                let domain = '';
-                                try {
-                                    domain = new URL(item.url).hostname;
-                                } catch (e) {
-                                    domain = 'google.com';
-                                }
-                                const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                            <div className="divide-y divide-gray-200/50 dark:divide-gray-800">
+                                {visibleItems.map((item, i) => {
+                                    // Extract domain for favicon
+                                    let domain = '';
+                                    try {
+                                        domain = new URL(item.url).hostname;
+                                    } catch (e) {
+                                        domain = 'google.com';
+                                    }
+                                    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
-                                return (
-                                    <a
-                                        key={i}
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 md:px-8 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group/item items-center"
-                                    >
-                                        <div className="md:hidden flex justify-between items-center mb-1">
-                                            <div className="flex items-center gap-2">
-                                                <BiasBadge bias={item.bias} />
-                                                <div className="flex items-center gap-1.5">
-                                                    <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded-sm opacity-80" />
-                                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{item.source}</span>
+                                    return (
+                                        <a
+                                            key={i}
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 md:px-8 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group/item items-center"
+                                        >
+                                            <div className="md:hidden flex justify-between items-center mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <BiasBadge bias={item.bias} />
+                                                    <div className="flex items-center gap-1.5">
+                                                        <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded-sm opacity-80" />
+                                                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{item.source}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div className="col-span-2 hidden md:block">
-                                            <BiasBadge bias={item.bias} />
-                                        </div>
+                                            <div className="col-span-2 hidden md:block">
+                                                <BiasBadge bias={item.bias} />
+                                            </div>
 
-                                        <div className="col-span-2 hidden md:flex items-center gap-2">
-                                            <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded-sm opacity-80" />
-                                            <span className="text-xs font-semibold text-gray-900 dark:text-gray-200 truncate">
-                                                {item.source}
-                                            </span>
-                                        </div>
+                                            <div className="col-span-2 hidden md:flex items-center gap-2">
+                                                <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded-sm opacity-80" />
+                                                <span className="text-xs font-semibold text-gray-900 dark:text-gray-200 truncate">
+                                                    {item.source}
+                                                </span>
+                                            </div>
 
-                                        <div className="col-span-12 md:col-span-8 flex justify-between items-center gap-4">
-                                            <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 group-hover/item:text-indigo-600 transition-colors font-medium leading-tight line-clamp-1">
-                                                {item.title}
-                                            </span>
-                                            <ExternalLink className="w-3 h-3 text-gray-300" />
-                                        </div>
-                                    </a>
-                                )
-                            })}
+                                            <div className="col-span-12 md:col-span-8 flex justify-between items-center gap-4">
+                                                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 group-hover/item:text-indigo-600 transition-colors font-medium leading-tight line-clamp-1">
+                                                    {item.title}
+                                                </span>
+                                                <ExternalLink className="w-3 h-3 text-gray-300" />
+                                            </div>
+                                        </a>
+                                    )
+                                })}
+                            </div>
+                            {hasMore && (
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setIsExpanded(!isExpanded);
+                                    }}
+                                    className="w-full py-3 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/20 transition-colors text-center border-t border-dashed border-gray-200 dark:border-gray-700"
+                                >
+                                    {isExpanded ? 'Ver menos' : `Ver ${cluster.items.length - 3} más...`}
+                                </button>
+                            )}
                         </div>
-                        {hasMore && (
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setIsExpanded(!isExpanded);
-                                }}
-                                className="w-full py-3 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/20 transition-colors text-center border-t border-dashed border-gray-200 dark:border-gray-700"
-                            >
-                                {isExpanded ? 'Ver menos' : `Ver ${cluster.items.length - 3} más...`}
-                            </button>
-                        )}
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
     );
 };
 
-const BiasBadge = ({ bias }: { bias?: BiasType }) => {
+export const BiasBadge = ({ bias }: { bias?: BiasType }) => {
     if (!bias) return <span className="text-xs text-gray-400">-</span>;
 
     const styles: Record<string, string> = {
