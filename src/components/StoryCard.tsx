@@ -16,6 +16,35 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
     const visibleItems = isExpanded ? cluster.items : cluster.items.slice(0, 3);
     const hasMore = cluster.items.length > 3;
 
+    const [analysis, setAnalysis] = useState<string | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    const handleAnalyze = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (analysis) return; // Already analyzed
+
+        setIsAnalyzing(true);
+        try {
+            const res = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: cluster.items })
+            });
+            const data = await res.json();
+            if (data.analysis) {
+                setAnalysis(data.analysis);
+            } else {
+                setAnalysis("No se pudo obtener el análisis. Inténtalo de nuevo.");
+            }
+        } catch (error) {
+            console.error(error);
+            setAnalysis("Error de conexión con la IA.");
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
     return (
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-300 group/card relative">
 
@@ -79,6 +108,37 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                         <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-2 border border-gray-100 dark:border-gray-700/50 mb-2">
                             <BiasBar distribution={cluster.biasDistribution} />
                         </div>
+
+                        {/* AI ANALYSIS BUTTON */}
+                        <button
+                            onClick={handleAnalyze}
+                            disabled={isAnalyzing}
+                            className={`w-full mt-2 py-2 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all ${analysis
+                                ? 'bg-indigo-50 border-indigo-100 text-indigo-700 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-300'
+                                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            {isAnalyzing ? (
+                                <>
+                                    <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                    Analizando con IA...
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-indigo-500 text-base">✨</span>
+                                    {analysis ? 'Análisis Completado' : 'Analizar Contradicciones y Sesgo'}
+                                </>
+                            )}
+                        </button>
+
+                        {/* ANALYSIS RESULT */}
+                        {analysis && (
+                            <div className="mt-3 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-800/30 text-xs sm:text-sm text-gray-700 dark:text-gray-300 animate-in fade-in slide-in-from-top-2">
+                                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed">
+                                    {analysis.replace(/\*\*/g, '').replace(/###/g, '')}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Compact List */}

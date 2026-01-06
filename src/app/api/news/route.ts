@@ -502,8 +502,84 @@ export async function GET(request: Request) {
                 urlToImage: article.urlToImage
             }));
 
-        // Cluster (With Bias 2.0 & Blindspots)
-        const clusters = clusterStories(newsItems);
+        // Cluster (With Bias 2.0 & Blindspots) -- Now with Gemini Option
+        let clusters: any[] = [];
+
+        // Try Gemini Smart Clustering first if Key exists
+        if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+            try {
+                const { GeminiProcessor } = require('@/lib/gemini');
+                const gemini = new GeminiProcessor();
+                const groupedIndices = await gemini.smartCluster(newsItems);
+
+                if (groupedIndices && groupedIndices.length > 0) {
+                    console.log(`[GEMINI] Smart Clustering success. Found ${groupedIndices.length} clusters.`);
+
+                    // Reconstruct clusters from indices and Calculate Bias Stats
+                    // We reuse the logic from clusterStories but apply it to the grouped indices
+                    clusters = groupedIndices.map((indices: number[]) => {
+                        const items = indices.map(i => newsItems[i]).filter(Boolean);
+                        if (items.length === 0) return null;
+
+                        // Sort by date desc
+                        items.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+
+                        const mainStory = items[0];
+
+                        // Calculate Bias Distrib
+                        const biasDist = {
+                            'left': 0, 'center-left': 0, 'center': 0, 'center-right': 0, 'right': 0
+                        };
+
+                        items.forEach(item => {
+                            // We need to re-calculate bias here since it was done inside clusterStories before
+                            // Ideally, we refactor getBiasForSource to be public export
+                            const { getBiasForSource } = require('@/lib/analyzer');
+                            const bias = getBiasForSource(item.source);
+                            item.bias = bias; // Attach to item
+                            if (bias && biasDist[bias] !== undefined) {
+                                biasDist[bias]++;
+                            }
+                        });
+
+                        // Check Blindspots (Reused logic)
+                        let blindspot = false;
+                        let blindspotSide: 'left' | 'right' | undefined = undefined;
+                        const leftBlock = biasDist['left'] + biasDist['center-left'];
+                        const rightBlock = biasDist['right'] + biasDist['center-right'];
+                        const total = leftBlock + rightBlock + biasDist['center'];
+
+                        if (total > 0) {
+                            if (leftBlock > 0 && rightBlock === 0) {
+                                blindspot = true; blindspotSide = 'right';
+                            } else if (rightBlock > 0 && leftBlock === 0) {
+                                blindspot = true; blindspotSide = 'left';
+                            }
+                        }
+
+                        return {
+                            id: crypto.randomUUID(),
+                            mainTitle: mainStory.title,
+                            summary: mainStory.description || mainStory.title,
+                            items: items,
+                            biasDistribution: biasDist,
+                            firstPublishedAt: mainStory.publishedAt,
+                            blindspot,
+                            blindspotSide
+                        };
+                    }).filter(Boolean);
+                }
+            } catch (e) {
+                console.error("[GEMINI] Failed to cluster:", e);
+                // Fallthrough to standard clustering
+            }
+        }
+
+        // Fallback or Standard Logic
+        if (clusters.length === 0) {
+            console.log("[CLUSTERING] Using Standard Jaccard Logic...");
+            clusters = clusterStories(newsItems);
+        }
 
         console.log(`[CLUSTERING] Produced ${clusters.length} clusters from ${newsItems.length} items.`);
 

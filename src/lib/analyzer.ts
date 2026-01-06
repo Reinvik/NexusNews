@@ -176,7 +176,7 @@ const SOURCE_BIAS: Record<string, BiasType> = {
     'New York Post': 'right'
 };
 
-function getBiasForSource(sourceName: string): BiasType {
+export function getBiasForSource(sourceName: string): BiasType {
     const cleanName = sourceName.trim();
     if (SOURCE_BIAS[cleanName]) return SOURCE_BIAS[cleanName];
 
