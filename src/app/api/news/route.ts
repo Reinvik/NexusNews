@@ -7,6 +7,8 @@ import {
     ANGLO_LEFT, ANGLO_RIGHT_CENTER
 } from '@/lib/analyzer';
 import { MOCK_CLUSTERS } from '@/lib/mockData';
+import { GeminiProcessor } from '@/lib/gemini';
+import { getBiasForSource } from '@/lib/analyzer';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -463,15 +465,8 @@ export async function GET(request: Request) {
             console.warn("⚠️ ALL APIs failed. Serving MOCK DATA.");
             // Serve mock data but filtered if possible, or just default mocks
             // We use the imported MOCK_CLUSTERS or a local hardcoded one if the import fails logic (but we corrected import)
-            const { MOCK_CLUSTERS } = require('@/lib/mockData'); // Dynamic require to avoid top-level issues if mixed
-            // Filter mocks by scope/query roughly if we wanted, for now just return all
-            // Convert MOCK_CLUSTERS to flat items for "clustering" function, or just return mocks as clusters directly
-            // But wait, the logic below expects 'articles' array to then be clustered.
-            // If we have mocks, they are ALREADY clusters.
-
-            // HACK: Expand mock clusters back into items to let the normal flow re-cluster them, 
-            // OR just map mock items to 'articles' array
             if (MOCK_CLUSTERS && MOCK_CLUSTERS.length > 0) {
+                // @ts-ignore
                 articles = MOCK_CLUSTERS.flatMap((c: any) => c.items || c.articles);
             }
         }
@@ -508,7 +503,7 @@ export async function GET(request: Request) {
         // Try Gemini Smart Clustering first if Key exists
         if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
             try {
-                const { GeminiProcessor } = require('@/lib/gemini');
+                // gemini matches imported class
                 const gemini = new GeminiProcessor();
                 const groupedIndices = await gemini.smartCluster(newsItems);
 
@@ -527,14 +522,12 @@ export async function GET(request: Request) {
                         const mainStory = items[0];
 
                         // Calculate Bias Distrib
-                        const biasDist = {
+                        const biasDist: Record<string, number> = {
                             'left': 0, 'center-left': 0, 'center': 0, 'center-right': 0, 'right': 0
                         };
 
                         items.forEach(item => {
                             // We need to re-calculate bias here since it was done inside clusterStories before
-                            // Ideally, we refactor getBiasForSource to be public export
-                            const { getBiasForSource } = require('@/lib/analyzer');
                             const bias = getBiasForSource(item.source);
                             item.bias = bias; // Attach to item
                             if (bias && biasDist[bias] !== undefined) {

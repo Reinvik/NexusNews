@@ -1,11 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { type NewsItem } from "./analyzer";
 
 const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
 export class GeminiProcessor {
     private genAI: GoogleGenerativeAI | null = null;
-    private model: any = null;
+    private model: GenerativeModel | null = null;
 
     constructor() {
         if (API_KEY) {

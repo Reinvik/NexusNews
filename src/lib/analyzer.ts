@@ -199,7 +199,7 @@ export function getBiasForSource(sourceName: string): BiasType {
  */
 export function clusterStories(stories: NewsItem[]): StoryCluster[] {
     const clusters: StoryCluster[] = [];
-    const threshold = 0.12;
+
 
     // Enrich with bias
     const sortedStories = stories.map(s => ({
