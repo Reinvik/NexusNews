@@ -6,27 +6,47 @@ import { CHILE_LEFT_LIST, CHILE_RIGHT_CENTER_LIST, type StoryCluster } from '@/l
 import { RefreshCw, Globe, MapPin, Search, Clock, MessageSquare, Newspaper } from 'lucide-react';
 import clsx from 'clsx';
 
-type Tab = 'nacional' | 'internacional' | 'anglo';
+type Tab = 'espanol' | 'anglo';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<Tab>('nacional');
+  const [activeTab, setActiveTab] = useState<Tab>('espanol');
   const [activeCategory, setActiveCategory] = useState<string>('general');
   const [selectedDate, setSelectedDate] = useState<string>(''); // YYYY-MM-DD
   const [selectedSource, setSelectedSource] = useState<string>('');
+  const [selectedProvider, setSelectedProvider] = useState<string>('auto'); // 'auto', 'newsapi', 'currents', 'gnews'
   const [clusters, setClusters] = useState<StoryCluster[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchNews = async (scope: Tab, query: string, category: string, date: string, source: string) => {
+  const fetchNews = async (scope: Tab, query: string, category: string, date: string, source: string, provider: string, forceRefresh = false) => {
     setLoading(true);
     setError(null);
     try {
+      // Updated cache key version to invalidate old caches on deployment/update
+      const CACHE_VERSION = 'v3';
+      const cacheKey = `news_cache_${scope}_${category}_${date}_${source}_${provider}_${query}_${CACHE_VERSION}`;
+
+      // 1. Try Cache if not forced
+      if (!forceRefresh) {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          // Optional: Check expiry (e.g. 1 hour) - for now infinite until "Update" clicked as requested
+          // "solo actualice cuando se aprete el boton actualizar"
+          console.log("Loading from cache:", cacheKey);
+          setClusters(parsed);
+          setLoading(false);
+          return;
+        }
+      }
+
       const params = new URLSearchParams({ scope });
       if (query.trim()) params.append('q', query.trim());
       if (category !== 'general') params.append('category', category);
       if (date) params.append('date', date);
       if (source) params.append('source', source);
+      if (provider && provider !== 'auto') params.append('provider', provider);
 
       const res = await fetch(`/api/news?${params.toString()}`);
       const data = await res.json();
@@ -38,6 +58,12 @@ export default function Home() {
         setClusters([]);
       } else {
         setClusters(data.clusters);
+        // 2. Save to Cache
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(data.clusters));
+        } catch (e) {
+          console.warn("Quota exceeded likely", e);
+        }
       }
 
     } catch (err: any) {
@@ -50,16 +76,20 @@ export default function Home() {
 
   // Initial load
   useEffect(() => {
-    fetchNews(activeTab, searchQuery, activeCategory, selectedDate, selectedSource);
-  }, [activeTab, activeCategory, selectedDate, selectedSource]);
+    fetchNews(activeTab, searchQuery, activeCategory, selectedDate, selectedSource, selectedProvider);
+  }, [activeTab, activeCategory, selectedDate, selectedSource, selectedProvider]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchNews(activeTab, searchQuery, activeCategory, selectedDate, selectedSource);
+    fetchNews(activeTab, searchQuery, activeCategory, selectedDate, selectedSource, selectedProvider);
   };
 
   const handleSourceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedSource(e.target.value);
+  };
+
+  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedProvider(e.target.value);
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +105,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-20 font-sans">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
 
           {/* Logo */}
           <div className="flex items-center gap-2">
@@ -106,7 +136,7 @@ export default function Home() {
 
             {/* Refresh */}
             <button
-              onClick={() => fetchNews(activeTab, searchQuery, activeCategory, selectedDate, selectedSource)}
+              onClick={() => fetchNews(activeTab, searchQuery, activeCategory, selectedDate, selectedSource, selectedProvider, true)}
               disabled={loading}
               className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-full text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all disabled:opacity-50 whitespace-nowrap"
             >
@@ -118,91 +148,104 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
         {/* Intro - Compact */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Tabs - Pill Style */}
-          <div className="bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 inline-flex overflow-x-auto max-w-full">
+        {/* Unified Toolbar */}
+        {/* Unified Toolbar - Cleaner, no heavy background */}
+        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 overflow-x-auto py-2">
+
+          {/* Tabs Group - Levitating pill style */}
+          <div className="flex items-center gap-1 p-1 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50">
             <button
-              onClick={() => setActiveTab('nacional')}
+              onClick={() => setActiveTab('espanol')}
               className={clsx(
-                "px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap",
-                activeTab === 'nacional'
-                  ? "bg-indigo-600 text-white shadow"
-                  : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                "px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap",
+                activeTab === 'espanol'
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+                  : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50"
               )}
             >
-              <MapPin className="w-4 h-4" />
-              Nacional
-            </button>
-            <button
-              onClick={() => setActiveTab('internacional')}
-              className={clsx(
-                "px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap",
-                activeTab === 'internacional'
-                  ? "bg-indigo-600 text-white shadow"
-                  : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-              )}
-            >
-              <Globe className="w-4 h-4" />
-              Internacional (ES)
+              <Globe className="w-3.5 h-3.5" />
+              Español
             </button>
             <button
               onClick={() => setActiveTab('anglo')}
               className={clsx(
-                "px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap",
+                "px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap",
                 activeTab === 'anglo'
-                  ? "bg-indigo-600 text-white shadow"
-                  : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+                  : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50"
               )}
             >
-              <Newspaper className="w-4 h-4" />
-              Mundo (EN)
+              <Newspaper className="w-3.5 h-3.5" />
+              English
             </button>
           </div>
 
-          {/* Source Filter */}
-          <div className="flex items-center gap-2 text-sm bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-            <Newspaper className="w-4 h-4 text-gray-400 ml-2" />
-            <select
-              value={selectedSource}
-              onChange={handleSourceChange}
-              className="bg-transparent border-none text-sm text-gray-700 dark:text-gray-200 focus:ring-0 outline-none p-1 cursor-pointer w-40"
-            >
-              <option value="">Todas las fuentes</option>
-              <optgroup label="Izquierda / Independiente">
-                {CHILE_LEFT_LIST.map(domain => (
-                  <option key={domain} value={domain}>{domain}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Centro / Derecha">
-                {CHILE_RIGHT_CENTER_LIST.map(domain => (
-                  <option key={domain} value={domain}>{domain}</option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
 
-          {/* Date Filter */}
-          <div className="flex items-center gap-2 text-sm bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-            <Clock className="w-4 h-4 text-gray-400 ml-2" />
-            <span className="text-xs font-bold text-gray-500 uppercase mr-1">Fecha:</span>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              className="bg-transparent border-none text-sm text-gray-700 dark:text-gray-200 focus:ring-0 outline-none p-1 cursor-pointer"
-            />
-            {selectedDate && (
-              <button
-                onClick={() => setSelectedDate('')}
-                className="text-xs text-red-500 hover:text-red-700 font-bold px-2"
-                title="Borrar fecha"
+
+          <div className="hidden md:block h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+          {/* Filters Group */}
+          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar w-full md:w-auto">
+            {/* Source Filter */}
+            <div className="flex items-center gap-2 text-sm">
+              <Newspaper className="w-4 h-4 text-gray-400" />
+              <select
+                value={selectedSource}
+                onChange={handleSourceChange}
+                className="bg-transparent border-none text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-0 outline-none cursor-pointer w-28 md:w-auto"
               >
-                ✕
-              </button>
-            )}
+                <option value="">Todas las fuentes</option>
+                <optgroup label="Izquierda / Independiente">
+                  {CHILE_LEFT_LIST.map(domain => (
+                    <option key={domain} value={domain}>{domain}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Centro / Derecha">
+                  {CHILE_RIGHT_CENTER_LIST.map(domain => (
+                    <option key={domain} value={domain}>{domain}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            {/* Date Filter */}
+            <div className="flex items-center gap-1 text-sm bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700">
+              <Clock className="w-3.5 h-3.5 text-gray-400" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                className="bg-transparent border-none text-sm text-gray-700 dark:text-gray-200 focus:ring-0 outline-none p-0 cursor-pointer"
+              />
+              {selectedDate && (
+                <button
+                  onClick={() => setSelectedDate('')}
+                  className="text-xs text-red-500 hover:text-red-700 font-bold ml-1"
+                  title="Borrar fecha"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Provider Selector */}
+            <div className="flex items-center gap-1 text-sm bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md border border-indigo-100 dark:border-indigo-800">
+              <span className="text-[10px] font-bold text-indigo-500 uppercase">API:</span>
+              <select
+                value={selectedProvider}
+                onChange={handleProviderChange}
+                className="bg-transparent border-none text-sm font-bold text-indigo-700 dark:text-indigo-300 focus:ring-0 outline-none p-0 cursor-pointer w-20"
+              >
+                <option value="auto">Auto</option>
+                <option value="newsapi">NewsAPI</option>
+                <option value="currents">Currents</option>
+                <option value="worldnews">World News API</option>
+                <option value="gnews">GNews</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -233,33 +276,37 @@ export default function Home() {
         </div>
 
         {/* Query Context */}
-        {searchQuery && (
-          <div className="text-center text-sm text-gray-500">
-            Resultados para: <span className="font-bold text-gray-800 dark:text-gray-200">"{searchQuery}"</span>
-            <button
-              onClick={() => { setSearchQuery(''); fetchNews(activeTab, '', activeCategory, selectedDate, selectedSource); }}
-              className="ml-2 text-indigo-500 hover:underline text-xs"
-            >
-              (Limpiar búsqueda)
-            </button>
-          </div>
-        )}
+        {
+          searchQuery && (
+            <div className="text-center text-sm text-gray-500">
+              Resultados para: <span className="font-bold text-gray-800 dark:text-gray-200">"{searchQuery}"</span>
+              <button
+                onClick={() => { setSearchQuery(''); fetchNews(activeTab, '', activeCategory, selectedDate, selectedSource, selectedProvider); }}
+                className="ml-2 text-indigo-500 hover:underline text-xs"
+              >
+                (Limpiar búsqueda)
+              </button>
+            </div>
+          )
+        }
 
         {/* Error State */}
-        {error && (
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-8 rounded-xl text-center">
-            <p className="font-bold text-lg mb-2">⚠️ {error}</p>
-            <p className="text-sm opacity-80">
-              Intenta cambiar la fecha o busca otro término.
-            </p>
-            <button
-              onClick={() => { setSelectedDate(''); setSelectedSource(''); fetchNews(activeTab, '', activeCategory, '', ''); }}
-              className="mt-4 px-4 py-2 bg-white border border-yellow-300 rounded-lg text-sm font-semibold hover:bg-yellow-100 transition-colors"
-            >
-              Ver Todo
-            </button>
-          </div>
-        )}
+        {
+          error && (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-8 rounded-xl text-center">
+              <p className="font-bold text-lg mb-2">⚠️ {error}</p>
+              <p className="text-sm opacity-80">
+                Intenta cambiar la fecha o busca otro término.
+              </p>
+              <button
+                onClick={() => { setSelectedDate(''); setSelectedSource(''); fetchNews(activeTab, '', activeCategory, '', '', selectedProvider); }}
+                className="mt-4 px-4 py-2 bg-white border border-yellow-300 rounded-lg text-sm font-semibold hover:bg-yellow-100 transition-colors"
+              >
+                Ver Todo
+              </button>
+            </div>
+          )
+        }
 
         {/* Feed */}
         <section className="space-y-4">
@@ -277,7 +324,7 @@ export default function Home() {
           )}
         </section>
 
-      </main>
-    </div>
+      </main >
+    </div >
   );
 }

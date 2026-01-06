@@ -10,25 +10,29 @@ interface StoryCardProps {
 }
 
 export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
     // Find the first valid image in the cluster
     const heroImage = cluster.items.find(item => item.urlToImage)?.urlToImage;
+    const visibleItems = isExpanded ? cluster.items : cluster.items.slice(0, 3);
+    const hasMore = cluster.items.length > 3;
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all duration-300 group/card relative">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-300 group/card relative">
 
             {/* BLINDSPOT BADGE */}
-            {cluster.blindspot && (
-                <div className="absolute top-0 right-0 z-10">
-                    <div className={`flex items-center gap-1 px-3 py-1 rounded-bl-xl text-[10px] font-bold uppercase tracking-wider text-white shadow-sm ${cluster.blindspotSide === 'left' ? 'bg-red-500' : 'bg-blue-600'}`}>
-                        <EyeOff className="w-3 h-3" />
-                        <span>Blindspot {cluster.blindspotSide === 'left' ? 'Izquierda' : 'Derecha'}</span>
-                    </div>
-                </div>
-            )}
+            <div className="flex flex-col h-full">
+                {/* HERO IMAGE SECTION - Top Position */}
+                <div className="w-full relative overflow-hidden bg-gray-100 dark:bg-gray-900 h-48 sm:h-56 shrink-0">
+                    {/* BLINDSPOT BADGE - Positioned over image */}
+                    {cluster.blindspot && (
+                        <div className="absolute top-0 right-0 z-20">
+                            <div className={`flex items-center gap-1 px-3 py-1.5 rounded-bl-xl text-[10px] font-bold uppercase tracking-wider text-white shadow-sm ${cluster.blindspotSide === 'left' ? 'bg-red-500' : 'bg-blue-600'}`}>
+                                <EyeOff className="w-3 h-3" />
+                                <span>Blindspot {cluster.blindspotSide === 'left' ? 'Izquierda' : 'Derecha'}</span>
+                            </div>
+                        </div>
+                    )}
 
-            <div className="flex flex-col md:flex-row h-full">
-                {/* HERO IMAGE SECTION */}
-                <div className="md:w-1/3 relative overflow-hidden bg-gray-100 dark:bg-gray-900 min-h-[200px] md:min-h-full">
                     {heroImage ? (
                         <img
                             src={heroImage}
@@ -53,40 +57,40 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                 <div className="flex-1 flex flex-col">
 
                     {/* Header */}
-                    <div className="p-6 pb-4">
-                        <div className="flex items-center gap-2 mb-3">
+                    <div className="p-6 md:p-8 pb-4">
+                        <div className="flex items-center gap-2 mb-2">
                             <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${cluster.blindspot ? 'bg-yellow-100 text-yellow-800' : 'bg-indigo-50 text-indigo-700'}`}>
                                 {cluster.blindspot ? 'Cobertura Parcial' : 'Cobertura Múltiple'}
                             </span>
                             <span className="text-xs text-gray-400 font-medium">
-                                {new Date(cluster.firstPublishedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(cluster.firstPublishedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>
 
-                        <h3 className="text-xl md:text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-3 leading-snug group-hover/card:text-indigo-700 transition-colors">
+                        <h3 className="text-2xl md:text-3xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-3 leading-tight group-hover/card:text-indigo-700 transition-colors">
                             {cluster.mainTitle}
                         </h3>
 
-                        <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed line-clamp-2 md:line-clamp-3 mb-4">
+                        <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm leading-relaxed line-clamp-2 mb-3">
                             {cluster.summary}...
                         </p>
 
                         {/* 5-Point Bias Bar */}
-                        <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-100 dark:border-gray-700/50">
+                        <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-2 border border-gray-100 dark:border-gray-700/50 mb-2">
                             <BiasBar distribution={cluster.biasDistribution} />
                         </div>
                     </div>
 
                     {/* Compact List */}
                     <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800 flex-1">
-                        <div className="hidden md:grid grid-cols-12 gap-3 px-6 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            <div className="col-span-3">Sesgo</div>
+                        <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                            <div className="col-span-2">Sesgo</div>
                             <div className="col-span-2">Medio</div>
-                            <div className="col-span-7 text-right">Titular</div>
+                            <div className="col-span-8 text-right">Titular</div>
                         </div>
 
                         <div className="divide-y divide-gray-200/50 dark:divide-gray-800">
-                            {cluster.items.slice(0, 5).map((item, i) => {
+                            {visibleItems.map((item, i) => { // Reduced from 5 to 3 for compactness
                                 // Extract domain for favicon
                                 let domain = '';
                                 try {
@@ -102,7 +106,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                                         href={item.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 px-6 py-3 hover:bg-white dark:hover:bg-gray-800 transition-colors group/item items-center"
+                                        className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 md:px-8 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group/item items-center"
                                     >
                                         <div className="md:hidden flex justify-between items-center mb-1">
                                             <div className="flex items-center gap-2">
@@ -114,7 +118,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                                             </div>
                                         </div>
 
-                                        <div className="col-span-3 hidden md:block">
+                                        <div className="col-span-2 hidden md:block">
                                             <BiasBadge bias={item.bias} />
                                         </div>
 
@@ -125,8 +129,8 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                                             </span>
                                         </div>
 
-                                        <div className="col-span-12 md:col-span-7 flex justify-between items-center gap-4">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400 group-hover/item:text-indigo-600 transition-colors font-medium leading-tight line-clamp-1">
+                                        <div className="col-span-12 md:col-span-8 flex justify-between items-center gap-4">
+                                            <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 group-hover/item:text-indigo-600 transition-colors font-medium leading-tight line-clamp-1">
                                                 {item.title}
                                             </span>
                                             <ExternalLink className="w-3 h-3 text-gray-300" />
@@ -135,6 +139,17 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                                 )
                             })}
                         </div>
+                        {hasMore && (
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setIsExpanded(!isExpanded);
+                                }}
+                                className="w-full py-3 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/20 transition-colors text-center border-t border-dashed border-gray-200 dark:border-gray-700"
+                            >
+                                {isExpanded ? 'Ver menos' : `Ver ${cluster.items.length - 3} más...`}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -163,7 +178,7 @@ const BiasBadge = ({ bias }: { bias?: BiasType }) => {
     };
 
     return (
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${styles[bias] || styles['center']} tracking-wide whitespace-nowrap`}>
+        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border-0 ${styles[bias] || styles['center']} tracking-wide whitespace-nowrap opacity-90`}>
             {labels[bias] || 'Centro'}
         </span>
     );

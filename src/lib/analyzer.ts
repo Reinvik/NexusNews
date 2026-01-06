@@ -216,9 +216,22 @@ export function clusterStories(stories: NewsItem[]): StoryCluster[] {
             const timeDiff = Math.abs(new Date(story.publishedAt).getTime() - new Date(cluster.firstPublishedAt).getTime());
             const hoursDiff = timeDiff / (1000 * 60 * 60);
 
-            if (hoursDiff < 48) {
+            if (hoursDiff < 72) {
+                // 1. Text Similarity (Original)
                 const similarity = jaccardSimilarity(story.title, cluster.mainTitle);
-                if (similarity > threshold) {
+
+                // 2. Entity Overlap (New)
+                const storyEntities = extractEntities(story.title);
+                const clusterEntities = extractEntities(cluster.mainTitle);
+                // Check intersection
+                const sharedEntities = [...storyEntities].filter(e => clusterEntities.has(e));
+                const hasSharedEntity = sharedEntities.length > 0;
+
+                // Rule: High Similarity (> 0.2) OR (Moderate Similarity > 0.1 AND Shared Entity)
+                const isHighSim = similarity > 0.2;
+                const isModerateSim = similarity > 0.08;
+
+                if (isHighSim || (isModerateSim && hasSharedEntity)) {
                     cluster.items.push(story);
 
                     // Update bias distribution
@@ -283,7 +296,61 @@ export function clusterStories(stories: NewsItem[]): StoryCluster[] {
         }
     });
 
-    return clusters;
+    // FILTER: Enforce Diversity (Minimum 2 distinct political leanings)
+    // "no quiero que muestren solo 1 noticia que es solo de un medio minimo deben haber 2 tendencias politicas distintas"
+    const diverseClusters = clusters.filter(c => {
+        // 1. Must have at least 2 items
+        if (c.items.length < 2) return false;
+
+        // 2. Removed strict diversity check to allow blindspots and more news
+        // "no importa si son mas antiguas... o noticias que al menos tienes 2 diferentes puntos"
+        // User agreed to relax this to see more content.
+
+        // const presentLeanings = Object.values(c.biasDistribution).filter(count => count > 0).length;
+        // if (presentLeanings < 2) {
+        //     return false;
+        // }
+
+        return true;
+    });
+
+    console.log(`[DIVERSITY CHECK] Dropped ${clusters.length - diverseClusters.length} clusters due to low diversity.`);
+
+    // FALLBACK: If diversity filter kills everything, return best effort (original clusters)
+    // We prioritize showing SOMETHING over showing nothing.
+    if (diverseClusters.length === 0 && clusters.length > 0) {
+        console.warn("[DIVERSITY CHECK] Strict diversity filter removed all news. Falling back to less strict clusters.");
+        return clusters;
+    }
+
+    return diverseClusters;
+}
+
+// Helper: Extract Capitalized Words (Potential Entities like "Maduro", "Kast", "Boric")
+function extractEntities(text: string): Set<string> {
+    const ignored = new Set([
+        'PARA', 'COMO', 'ESTE', 'ESTA', 'PERO', 'PORQUE', 'CUANDO', 'DONDE', 'QUIEN',
+        'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO',
+        'CHILE', 'SANTIAGO', 'GOBIERNO', 'PAIS', 'MUNDO', 'NACIONAL', 'INTERNACIONAL',
+        'NOTICIAS', 'AHORA', 'ULTIMO', 'MINUTO', 'VIVO', 'DIRECTO'
+    ]);
+
+    const words = text.split(/\s+/);
+    const entities = new Set<string>();
+
+    for (const word of words) {
+        // Clean punctuation: "Maduro," -> "Maduro"
+        const cleanParams = word.replace(/[^\w\u00C0-\u00FF]/g, '');
+
+        if (cleanParams.length > 3 && /^[A-ZÁÉÍÓÚÑ]/.test(cleanParams)) {
+            // Check if it's NOT ALL CAPS (unless short acronym, but filtering length > 3 usually avoids acronyms)
+            // or check against ignore list
+            if (!ignored.has(cleanParams.toUpperCase())) {
+                entities.add(cleanParams.toLowerCase());
+            }
+        }
+    }
+    return entities;
 }
 
 // Helper: Improved Jaccard Similarity
