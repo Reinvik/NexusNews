@@ -197,14 +197,20 @@ export const StoryCard: React.FC<StoryCardProps> = ({ cluster }) => {
                                                 {/* ROW 1: Source & Bias */}
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider border ${item.meta.sesgo.toLowerCase().includes('izquierda') ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                                                            item.meta.sesgo.toLowerCase().includes('derecha') ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                                'bg-purple-50 text-purple-700 border-purple-100'
+                                                        item.meta.sesgo.toLowerCase().includes('derecha') ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                            'bg-purple-50 text-purple-700 border-purple-100'
                                                         }`}>
                                                         {item.meta.sesgo.split(' ')[0]}
                                                     </span>
                                                     {/* Favicon fallback using Google S2 */}
                                                     <img
-                                                        src={`https://www.google.com/s2/favicons?domain=${new URL(itemUrl).hostname}&sz=64`}
+                                                        src={`https://www.google.com/s2/favicons?domain=${(() => {
+                                                            try {
+                                                                return new URL(itemUrl).hostname;
+                                                            } catch {
+                                                                return 'google.com';
+                                                            }
+                                                        })()}&sz=64`}
                                                         onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
                                                         className="w-4 h-4 rounded-sm opacity-80"
                                                         alt=""
