@@ -65,6 +65,9 @@ export class GeminiProcessor {
 
         CONTEXTO: Se te entregan un grupo de artículos sobre un mismo evento noticioso provenientes de diferentes fuentes. Tu misión es diseccionar la cobertura para exponer las discrepancias y los "puntos ciegos" informativos.
 
+        ARTÍCULOS A ANALIZAR:
+        ${simplifiedList}
+
         INSTRUCCIONES DE ANÁLISIS:
         Realiza una "Auditoría Lineal" de cada fuente proporcionada. Para cada artículo, identifica su framing (enfoque), lo que oculta (puntos ciegos) y un adjetivo crítico que defina su tono.
 
